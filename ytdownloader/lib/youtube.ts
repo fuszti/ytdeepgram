@@ -1,6 +1,12 @@
-import youtubeDl from 'youtube-dl-exec';
 import { Readable } from 'stream';
 import { spawn } from 'child_process';
+import { promisify } from 'util';
+import { exec } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
+const execAsync = promisify(exec);
 
 export interface VideoInfo {
   title: string;
@@ -12,13 +18,18 @@ export interface VideoInfo {
 
 export async function getVideoInfo(url: string): Promise<VideoInfo> {
   try {
-    const info = await youtubeDl(url, {
-      dumpSingleJson: true,
-      noCheckCertificates: true,
-      noWarnings: true,
-      preferFreeFormats: true,
-      addHeader: ['referer:youtube.com', 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36']
-    }) as any;
+    // Use updated yt-dlp path
+    const { stdout, stderr } = await execAsync(`/usr/local/bin/yt-dlp --dump-json --no-warnings "${url}"`);
+    
+    if (stderr) {
+      console.warn('yt-dlp stderr:', stderr);
+    }
+    
+    if (!stdout || !stdout.trim()) {
+      throw new Error('No output from yt-dlp');
+    }
+    
+    const info = JSON.parse(stdout.trim());
 
     return {
       title: info.title || 'Unknown Title',
@@ -29,13 +40,16 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
     };
   } catch (error) {
     console.error('YouTube info extraction error:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+    }
     throw new Error('Failed to get video information. The video may be private, restricted, or the URL is invalid.');
   }
 }
 
 export async function downloadVideo(url: string): Promise<Readable> {
   try {
-    const process = spawn('yt-dlp', [
+    const process = spawn('/usr/local/bin/yt-dlp', [
       '--format', 'best[ext=mp4]',
       '--output', '-',
       '--quiet',
@@ -52,17 +66,22 @@ export async function downloadVideo(url: string): Promise<Readable> {
 
 export async function downloadAudio(url: string): Promise<Readable> {
   try {
-    const process = spawn('yt-dlp', [
-      '--format', 'bestaudio',
-      '--extract-audio',
-      '--audio-format', 'mp3',
-      '--output', '-',
-      '--quiet',
-      '--no-warnings',
-      url
-    ]);
-
-    return process.stdout as Readable;
+    // Create a temporary file for the audio
+    const tempDir = os.tmpdir();
+    const tempFile = path.join(tempDir, `yt-audio-${Date.now()}.%(ext)s`);
+    
+    console.log('Downloading audio to temporary file...');
+    
+    // Download audio to temporary file with updated path
+    await execAsync(`/usr/local/bin/yt-dlp --format "bestaudio/best" --extract-audio --audio-format mp3 --output "${tempFile}" --no-warnings "${url}"`);
+    
+    // Find the actual file (yt-dlp will replace %(ext)s with mp3)
+    const actualFile = tempFile.replace('.%(ext)s', '.mp3');
+    
+    console.log('Audio downloaded to:', actualFile);
+    
+    // Return a readable stream from the file
+    return fs.createReadStream(actualFile);
   } catch (error) {
     console.error('YouTube audio download error:', error);
     throw new Error('Failed to download audio. The video may be private or restricted.');
