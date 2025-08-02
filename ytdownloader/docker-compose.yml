@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  ytdownloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ytdownloader:latest
+    container_name: ytdownloader
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+    volumes:
+      - ./.env:/app/.env:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ytdownloader-network
+
+networks:
+  ytdownloader-network:
+    driver: bridge
