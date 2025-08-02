@@ -1,1 +1,68 @@
 .env
+
+# dependencies
+node_modules/
+*/node_modules/
+**/node_modules/
+/.pnp
+.pnp.js
+
+# next.js builds
+.next/
+**/.next/
+/out/
+dist/
+build/
+
+# downloaded content (YouTube videos, audio, etc.)
+*.mp4
+*.mp3
+*.wav
+*.m4a
+*.webm
+*.mkv
+*.avi
+*.mov
+downloads/
+temp/
+tmp/
+
+# misc
+.DS_Store
+*.pem
+*.log
+
+# local env files
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Claude Flow generated files
+.claude/settings.local.json
+.mcp.json
+claude-flow.config.json
+.swarm/
+.hive-mind/
+memory/claude-flow-data.json
+memory/sessions/*
+!memory/sessions/README.md
+memory/agents/*
+!memory/agents/README.md
+coordination/memory_bank/*
+coordination/subtasks/*
+coordination/orchestration/*
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+claude-flow
+claude-flow.bat
+claude-flow.ps1
+hive-mind-prompt-*.txt
