@@ -3,7 +3,8 @@ FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 py3-pip ffmpeg
+RUN pip3 install --break-system-packages yt-dlp
 WORKDIR /app
 
 # Copy package files
@@ -25,6 +26,10 @@ RUN npm run build
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
+
+# Install yt-dlp and ffmpeg in the runner stage
+RUN apk add --no-cache python3 py3-pip ffmpeg
+RUN pip3 install --break-system-packages yt-dlp
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
