@@ -19,18 +19,22 @@ export interface TranscriptionResult {
 export async function transcribeAudio(audioStream: Readable, language?: string): Promise<TranscriptionResult> {
   try {
     const options: any = {
-      model: 'base',
+      model: 'nova-2',
       smart_format: true,
       punctuate: true,
       utterances: true,
-      detect_language: true,
+      paragraphs: true,
+      diarize: false,
     };
 
     // If a specific language is requested, use it
     if (language) {
       options.language = language;
-      // Don't use detect_language if we specify a language
-      delete options.detect_language;
+      console.log(`Using specified language: ${language}`);
+    } else {
+      // Use language detection when no language is specified
+      options.detect_language = true;
+      console.log('Using automatic language detection');
     }
 
     console.log('Deepgram options:', options);

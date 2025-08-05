@@ -14,6 +14,7 @@ interface ProcessingState {
 
 export default function Home() {
   const [url, setUrl] = useState('');
+  const [language, setLanguage] = useState('');
   const [state, setState] = useState<ProcessingState>({
     isProcessing: false,
     status: '',
@@ -53,7 +54,7 @@ export default function Home() {
       const response = await fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, language }),
       });
 
       if (!response.ok) {
@@ -156,6 +157,47 @@ export default function Home() {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Language (Optional)</label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                disabled={state.isProcessing}
+              >
+                <option value="">Auto-detect</option>
+                <option value="en">English</option>
+                <option value="hu">Hungarian</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="it">Italian</option>
+                <option value="pt">Portuguese</option>
+                <option value="ru">Russian</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="zh">Chinese</option>
+                <option value="nl">Dutch</option>
+                <option value="pl">Polish</option>
+                <option value="cs">Czech</option>
+                <option value="tr">Turkish</option>
+                <option value="ar">Arabic</option>
+                <option value="ro">Romanian</option>
+                <option value="sv">Swedish</option>
+                <option value="da">Danish</option>
+                <option value="no">Norwegian</option>
+                <option value="fi">Finnish</option>
+                <option value="uk">Ukrainian</option>
+                <option value="el">Greek</option>
+                <option value="he">Hebrew</option>
+                <option value="hi">Hindi</option>
+                <option value="th">Thai</option>
+                <option value="id">Indonesian</option>
+                <option value="ms">Malay</option>
+                <option value="vi">Vietnamese</option>
+              </select>
             </div>
 
             <AnimatePresence>
