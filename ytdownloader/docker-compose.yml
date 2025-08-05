@@ -15,7 +15,7 @@ services:
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
     volumes:
       - ./.env:/app/.env:ro
-      - ./downloads:/app/downloads
+      - ytdownloader_cache:/app/downloads
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
       interval: 30s
@@ -24,6 +24,10 @@ services:
       start_period: 40s
     networks:
       - ytdownloader-network
+
+volumes:
+  ytdownloader_cache:
+    driver: local
 
 networks:
   ytdownloader-network:
