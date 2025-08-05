@@ -37,6 +37,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Create downloads directory with proper permissions
+RUN mkdir -p /app/downloads && chown nextjs:nodejs /app/downloads
+
 # Copy built application
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
