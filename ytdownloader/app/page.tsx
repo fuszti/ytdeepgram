@@ -2,25 +2,32 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, FileText, Music, Video, Loader2, AlertCircle } from 'lucide-react';
+import { Download, FileText, Music, Video, Loader2, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 
 interface ProcessingState {
   isProcessing: boolean;
   status: string;
   videoInfo: any;
   transcript: string;
+  transcriptTimestamped: string;
   error: string | null;
+  cached: boolean;
+  processedAt?: string;
+  videoId?: string;
 }
 
 export default function Home() {
   const [url, setUrl] = useState('');
   const [language, setLanguage] = useState('');
+  const [transcriptView, setTranscriptView] = useState<'clean' | 'timestamped'>('clean');
   const [state, setState] = useState<ProcessingState>({
     isProcessing: false,
     status: '',
     videoInfo: null,
     transcript: '',
+    transcriptTimestamped: '',
     error: null,
+    cached: false,
   });
 
   const validateYouTubeUrl = (url: string): boolean => {
@@ -44,10 +51,12 @@ export default function Home() {
 
     setState({
       isProcessing: true,
-      status: 'Fetching video information...',
+      status: 'Checking cache and fetching video information...',
       videoInfo: null,
       transcript: '',
+      transcriptTimestamped: '',
       error: null,
+      cached: false,
     });
 
     try {
@@ -67,6 +76,10 @@ export default function Home() {
         isProcessing: false,
         videoInfo: data.videoInfo,
         transcript: data.transcript,
+        transcriptTimestamped: data.transcriptTimestamped || '',
+        cached: data.cached || false,
+        processedAt: data.processedAt,
+        videoId: data.videoId,
       }));
     } catch (error) {
       setState(prev => ({
@@ -107,6 +120,36 @@ export default function Home() {
       setState(prev => ({
         ...prev,
         error: 'Download failed. Please try again.',
+      }));
+    }
+  };
+
+  const handleTranscriptDownload = async (format: 'clean' | 'timestamped' | 'json') => {
+    try {
+      const params = new URLSearchParams({ url, format });
+      const response = await fetch(`/api/transcript?${params}`);
+
+      if (!response.ok) throw new Error('Transcript download failed');
+
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      
+      const filename = state.videoInfo?.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'transcript';
+      const extensions = {
+        'clean': 'txt',
+        'timestamped': 'txt',
+        'json': 'json'
+      };
+      
+      a.download = `${filename}_${format}.${extensions[format]}`;
+      a.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: 'Transcript download failed. Please try again.',
       }));
     }
   };
@@ -235,50 +278,119 @@ export default function Home() {
                 className="space-y-6"
               >
                 <div className="bg-gray-700/30 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold mb-2">{state.videoInfo.title}</h3>
-                  <p className="text-gray-300 mb-4">by {state.videoInfo.author}</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2">{state.videoInfo.title}</h3>
+                      <p className="text-gray-300 mb-2">by {state.videoInfo.author}</p>
+                      {state.cached && (
+                        <div className="flex items-center gap-2 text-green-400 text-sm">
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Loaded from cache</span>
+                          {state.processedAt && (
+                            <span className="text-gray-400">
+                              • {new Date(state.processedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {!state.cached && (
+                        <div className="flex items-center gap-2 text-blue-400 text-sm">
+                          <Clock className="w-4 h-4" />
+                          <span>Freshly processed</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button
-                      onClick={() => handleDownload('video')}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                    >
-                      <Video className="w-4 h-4" />
-                      <span>Video</span>
-                    </button>
-                    <button
-                      onClick={() => handleDownload('audio')}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                    >
-                      <Music className="w-4 h-4" />
-                      <span>Audio</span>
-                    </button>
-                    <button
-                      onClick={() => handleDownload('transcript-md')}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>MD</span>
-                    </button>
-                    <button
-                      onClick={() => handleDownload('transcript-json')}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>JSON</span>
-                    </button>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-300 mb-2">Media Downloads</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => handleDownload('video')}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                        >
+                          <Video className="w-4 h-4" />
+                          <span>Video</span>
+                        </button>
+                        <button
+                          onClick={() => handleDownload('audio')}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                        >
+                          <Music className="w-4 h-4" />
+                          <span>Audio</span>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-300 mb-2">Transcript Downloads</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <button
+                          onClick={() => handleTranscriptDownload('clean')}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>Clean Text</span>
+                        </button>
+                        <button
+                          onClick={() => handleTranscriptDownload('timestamped')}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors"
+                        >
+                          <Clock className="w-4 h-4" />
+                          <span>Timestamped</span>
+                        </button>
+                        <button
+                          onClick={() => handleTranscriptDownload('json')}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>Full JSON</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {state.transcript && (
                   <div className="bg-gray-700/30 rounded-lg p-6">
-                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                      <FileText className="w-5 h-5" />
-                      Transcript
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-semibold flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Transcript
+                      </h3>
+                      
+                      <div className="flex bg-gray-600 rounded-lg p-1">
+                        <button
+                          onClick={() => setTranscriptView('clean')}
+                          className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                            transcriptView === 'clean'
+                              ? 'bg-purple-600 text-white'
+                              : 'text-gray-300 hover:text-white'
+                          }`}
+                        >
+                          Clean
+                        </button>
+                        <button
+                          onClick={() => setTranscriptView('timestamped')}
+                          className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                            transcriptView === 'timestamped'
+                              ? 'bg-orange-600 text-white'
+                              : 'text-gray-300 hover:text-white'
+                          }`}
+                          disabled={!state.transcriptTimestamped}
+                        >
+                          Timestamped
+                        </button>
+                      </div>
+                    </div>
+                    
                     <div className="bg-gray-800/50 rounded-lg p-4 max-h-96 overflow-y-auto">
                       <pre className="whitespace-pre-wrap text-gray-300 text-sm">
-                        {state.transcript}
+                        {transcriptView === 'clean' 
+                          ? state.transcript 
+                          : state.transcriptTimestamped || 'Timestamped transcript not available'
+                        }
                       </pre>
                     </div>
                   </div>

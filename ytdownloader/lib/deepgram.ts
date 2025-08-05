@@ -24,6 +24,8 @@ export async function transcribeAudio(audioStream: Readable, language?: string):
       punctuate: true,
       utterances: true,
       paragraphs: true,
+      words: true,
+      timestamps: true,
       diarize: false,
     };
 
